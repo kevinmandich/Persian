@@ -18,6 +18,7 @@ class Game(object):
     self.turn = 1
     self.phase = None
     self.wildlings = 0
+    self.order_tokens = ORDER_TOKENS
 
     # self.supply_track =
 
@@ -55,10 +56,16 @@ class Game(object):
   def action_phase(self):
     self.phase = 'Action'
     #eventually order players by influence
+
+    #Resolve Raid
+    #Resolve March
+    #Resolve Consolidate
+
     for player in self.players:
       player.move(self)
-      self.check_winner()
-
+      winner = self.check_winner()
+      if winner:
+        return
 
   def check_winner(self):
     winner = None
@@ -78,6 +85,8 @@ class Game(object):
 
     if self.turn > 9 or max_castles >= 7:
       winner = leader
+      self.winner = winner
+      return winner
 
     self.winner = winner
 
@@ -85,6 +94,24 @@ class Game(object):
   def run(self):
     while self.turn < 10 and not self.winner:
       self.tick()
+    ORDER_TOKENS = [
+    {'type': 'Raid', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Raid', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Raid', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'March', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'March', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'March', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Defense', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Defense', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Defense', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Support', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Support', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Support', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Consolidate', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Consolidate', 'value': 0, 'stars': 0, 'valid': True},
+    {'type': 'Consolidate', 'value': 0, 'stars': 0, 'valid': True},
+    ]
+
 
 
 
