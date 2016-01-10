@@ -5,7 +5,7 @@ from territories import *
 
 class Game(object):
   '''
-  The Game object keeps track of game-wide information.
+  The Game object keeps track of the game state.
   '''
 
   def __init__(self, players, ruleset='classic'):
@@ -14,7 +14,10 @@ class Game(object):
     self.ruleset = ruleset
 
     self.turn = 1
+    self.phase = None
     self.wildlings = 0
+
+    self.supply_track = 
 
 
 class Map(dict):
@@ -28,19 +31,3 @@ class Map(dict):
 
 
 
-class Territory(object):
-  '''
-  A territory object is a node in the Map graph.
-  '''
-
-  def __init__(self, name, type_, supplies, castles, consolidation, port, garrison, owner, neighbors):
-
-    self.name = name
-    self.type = type_
-    self.supplies = supplies
-    self.castles = castles
-    self.consolidation = consolidation
-    self.port = port
-    self.garrison = garrison
-    self.owner = owner
-    self.neighbors = neighbors
