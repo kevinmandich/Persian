@@ -1,4 +1,4 @@
-from game import ORDER_TOKENS
+from fixed import *
 
 
 class Player(object):

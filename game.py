@@ -4,6 +4,7 @@ import time
 from collections import defaultdict
 
 from territories import *
+from fixed import *
 
 class Game(object):
   '''
@@ -94,23 +95,6 @@ class Game(object):
   def run(self):
     while self.turn < 10 and not self.winner:
       self.tick()
-    ORDER_TOKENS = [
-    {'type': 'Raid', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Raid', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Raid', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'March', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'March', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'March', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Defense', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Defense', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Defense', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Support', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Support', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Support', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Consolidate', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Consolidate', 'value': 0, 'stars': 0, 'valid': True},
-    {'type': 'Consolidate', 'value': 0, 'stars': 0, 'valid': True},
-    ]
 
 
 
@@ -126,6 +110,7 @@ class Map(defaultdict):
 
     defaultdict.__init__(self, dict)
     self.territories = territories
+    self.territory_map = {}
 
   def create(self):
 
