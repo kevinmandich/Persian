@@ -25,7 +25,7 @@ class Territory(object):
     self.ships          = ships         # int
     self.portShips      = portShips     # int
 
-territories = [ \
+base = [ \
 Territory(name='Bay of Ice', \
           type_='sea', \
           supplies=0, \
@@ -828,9 +828,4 @@ Territory(name='East Summer Sea', \
           ), \
 ]
 
-
-
-
-
-
-
+territories = { t.name: t for t in base }
