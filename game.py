@@ -111,15 +111,25 @@ class Map(defaultdict):
 
     defaultdict.__init__(self, dict)
     self.territories = territories
-    self.territory_map = {}
+
+  def __str__(self):
+    '''
+    Print out a formatted representation of each Territory
+    and its neighbors
+    '''
+
+    for t1 in self:
+      print '\n', t1
+      for t2 in self[t1]:
+        print '    {} - {}'.format(t2, self[t1][t2])
 
   def create(self):
 
-    for t in self.territories.itervalues():
+    for name, t in self.territories.iteritems():
       for neighbor in t.neighbors:
         n = self.territories[neighbor]
-        self[t][n] = t.type + '-' + n.type
-        self[n][t] = n.type + '-' + t.type
+        self[t.name][n.name] = t.type + '-' + n.type
+        self[n.name][t.name] = n.type + '-' + t.type
 
 
 if __name__ == '__main__':
