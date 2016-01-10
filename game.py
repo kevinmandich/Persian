@@ -77,10 +77,11 @@ class Game(object):
     for p in self.players:
       player_dict[p.name] = 0
 
-    for t in self.territories:
-      player_dict[t.owner.name] += 1
+    for t in self.map.territories.itervalues():
+      if t.owner:
+        player_dict[t.owner.name] += 1
 
-    for p, count in player_dict.iter_items():
+    for p, count in player_dict.iteritems():
       if count > max_castles:
         leader = p
 

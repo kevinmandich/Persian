@@ -15,17 +15,19 @@ class Player(object):
     self.knights_units = 5
     self.siege_units   = 2
 
-    def move(self, game):
-      if game.phase == 'Planning':
-        self.planning_move(game)
-      else if game.phase == 'Action':
-        self.action_move(game)
+  def move(self, game):
+    if game.phase == 'Planning':
+      self.planning_move(game)
+    elif game.phase == 'Action':
+      self.action_move(game)
 
-    def action_move(self, game):
-      #TODO
+  def action_move(self, game):
+    game
+    #TODO
 
-    def planning_move(self, game):
-      #TODO
+  def planning_move(self, game):
+    game
+    #TODO
 
 players = [
 
