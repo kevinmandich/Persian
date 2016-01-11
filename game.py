@@ -2,9 +2,11 @@ import os
 import time
 
 from collections import defaultdict
+from random import shuffle
 
 from territories import *
 from fixed import *
+from player import Player
 
 class Game(object):
   '''
@@ -17,27 +19,29 @@ class Game(object):
     self.players = players
     self.ruleset = ruleset
     self.map = Map(territories)
-    self.map.create()
 
     self.turn = 0
     self.phase = None
     self.wildlings = 0
-    self.order_tokens = ORDER_TOKENS             # list of dicts
 
-    self.supply_map = SUPPLY_MAP                 # dict
+    self.houses        = PLAYER_MAP              # dict
+    self.order_tokens  = ORDER_TOKENS            # list of dicts
+    self.supply_map    = SUPPLY_MAP              # dict
     self.supply_limits = STARTING_SUPPLY_LIMITS  # dict
-    self.supply_loads = STARTING_SUPPLY_LOADS    # dict
-    self.victory = STARTING_VICTORY              # dict
-    self.influence = STARTING_INFLUENCE          # dict of dicts
+    self.supply_loads  = STARTING_SUPPLY_LOADS   # dict
+    self.victory       = STARTING_VICTORY        # dict
+    self.influence     = STARTING_INFLUENCE      # dict of dicts
 
     self.winner = None
 
-  # def instantiate(self):
-
-    # self.map.create()
+    self.assign_houses()
 
 
   def assign_houses(self):
+
+    shuffle(self.houses)
+    for index in self.houses:
+      self.players[index].house = self.houses[index]
 
     return None
 
@@ -123,6 +127,7 @@ class Map(defaultdict):
 
     defaultdict.__init__(self, dict)
     self.territories = territories
+    self.create()
 
   def __str__(self):
     '''
@@ -157,9 +162,15 @@ class Map(defaultdict):
 
 if __name__ == '__main__':
 
-  players = {0:'kevin',1:'will',2:'scot',3:'vidur',4:'andrew',5:'paul'}
+  players = [
+    Player(name='Kevin'),
+    Player(name='Will'),
+    Player(name='Scot'),
+    Player(name='Vidur'),
+    Player(name='Andrew'),
+    Player(name='Paul'),
+  ]
   g = Game(players=players, ruleset='classic')
-  # g.instantiate()
 
 
 
