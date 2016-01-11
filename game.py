@@ -1,5 +1,6 @@
 import os
 import time
+import copy
 
 from collections import defaultdict
 from random import shuffle
@@ -18,9 +19,8 @@ class Game(object):
 
     self.players = players
     self.players_dict = { p.name : p for p in self.players }
-
     self.ruleset = ruleset
-    self.map = Map(territories)
+    self.map = Map(copy.deepcopy(territories))
 
     self.winner = None
     self.turn = 0
@@ -39,21 +39,36 @@ class Game(object):
     self.supply_loads   = STARTING_SUPPLY_LOADS   # dict
     self.victory        = STARTING_VICTORY        # dict
     self.influence      = STARTING_INFLUENCE      # dict of dicts
-    self.wildling_cards = shuffle(WILDLING_CARDS)
-    # self.westeros_cards = { num : shuffle(deck) for num, deck in WESTEROS_CARDS.iteritems() }
+
     self.throne_holder  = self.influence['iron throne'][1]
     self.sword_holder   = self.influence['fiefdom'][1]
     self.raven_holder   = self.influence['kings court'][1]
 
+    shuffle(WILDLING_CARDS)
+    { shuffle(deck) for deck in WESTEROS_CARDS.itervalues() }
+    self.wildling_cards = WILDLING_CARDS
+    self.westeros_cards = WESTEROS_CARDS
+
     self.assign_houses()
 
   def __str__(self):
-    s = ''
+    s = '\nPlayers:'
+    for k, v in self.players_dict.iteritems():
+      s += '\n  {}: {} ... AI module: {}'.format(k, v.house, v.ai)
+    s += '\n\nWinner:\n  {}'.format(self.winner)
+    s += '\n\nRuleset:\n  {}'.format(self.ruleset)
+    s += '\n\nTurn:\n  {}'.format(self.turn)
+    s += '\n\nPhase:\n  {}'.format(self.phase)
+    s += '\n\nWildlings:\n  {}'.format(self.wildlings)
+    s += '\n\nInfluence:'
+    for influence in self.influence:
+      s += '\n  {}:'.format(influence)
+      for place, player in self.influence[influence].iteritems():
+        s += '\n    {}: {}'.format(place, player)
     return s
 
 
   def assign_houses(self):
-
     shuffle(self.houses)
     for index in self.houses:
       self.players[index].house = self.houses[index]
@@ -73,6 +88,9 @@ class Game(object):
     for t in territories.itervalues():
       t.order_token = None
 
+  def reconcile_supply(self):
+    supplies = self.map.owned_supplies(self.players)
+
   def westeros_phase(self):
     return
     self.phase = 'Westeros'
@@ -82,7 +100,7 @@ class Game(object):
       if card == 'muster':
         pass
       if card == 'supply':
-        pass
+        self.reconcile_supply()
       if card == 'bid':
         pass
       if card == 'consolidate':
@@ -306,6 +324,20 @@ class Map(defaultdict):
         territories.append(t)
 
     return territories
+
+  def owned_territories(self, players):
+    ot = { p.house : [] for p in players }
+    for t in self.territories.itervalues():
+      if t.owner:
+        ot[t.owner].append(t.name)
+    return ot
+
+  def owned_supplies(self, players):
+    sl = { p.house : 0 for p in players }
+    for t in self.territories.itervalues():
+      if t.owner:
+        sl[t.owner] += t.supplies
+    return sl
 
 
 if __name__ == '__main__':
