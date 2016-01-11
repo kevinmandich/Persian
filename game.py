@@ -17,7 +17,9 @@ class Game(object):
     self.players = players
     self.ruleset = ruleset
     self.map = Map(territories)
-    self.turn = 1
+    self.map.create()
+
+    self.turn = 0
     self.phase = None
     self.wildlings = 0
     self.order_tokens = ORDER_TOKENS             # list of dicts
@@ -30,9 +32,9 @@ class Game(object):
 
     self.winner = None
 
-  def instantiate(self):
+  # def instantiate(self):
 
-    self.map.create()
+    # self.map.create()
 
 
   def assign_houses(self):
@@ -41,12 +43,13 @@ class Game(object):
 
 
   def tick(self):
+    self.turn += 1
+    print 'turn {}'.format(self.turn)
     if self.turn > 1:
       self.westeros_phase()
 
     self.planning_phase()
     self.action_phase()
-    self.turn += 1
 
   def westeros_phase(self):
     self.phase = 'Westeros'
@@ -55,9 +58,11 @@ class Game(object):
     #   player.move(self)
 
   def planning_phase(self):
+    print 'Planning Phase'
     self.phase = 'Planning'
     for player in self.players:
-      player.move(self)
+      plans = player.move(self)
+      print plans
 
   def action_phase(self):
     self.phase = 'Action'
@@ -84,23 +89,25 @@ class Game(object):
 
     for t in self.map.territories.itervalues():
       if t.owner:
-        player_dict[t.owner.name] += 1
+        player_dict[t.owner] += 1
 
     for p, count in player_dict.iteritems():
       if count > max_castles:
+        max_castles = count
         leader = p
 
     if self.turn > 9 or max_castles >= 7:
       winner = leader
-      self.winner = winner
-      return winner
 
     self.winner = winner
+    return winner
 
 
   def run(self):
     while self.turn < 10 and not self.winner:
       self.tick()
+
+    return self.check_winner()
 
 
 
@@ -139,12 +146,20 @@ class Map(defaultdict):
         self[t.name][n.name] = t.type + '-' + n.type
         self[n.name][t.name] = n.type + '-' + t.type
 
+  def territories_for(self, player):
+    player_territories = []
+    for t in self.territories.itervalues():
+      if t.owner and t.owner == player.name:
+        player_territories.append(t)
+
+    return player_territories
+
 
 if __name__ == '__main__':
 
   players = {0:'kevin',1:'will',2:'scot',3:'vidur',4:'andrew',5:'paul'}
   g = Game(players=players, ruleset='classic')
-  g.instantiate()
+  # g.instantiate()
 
 
 

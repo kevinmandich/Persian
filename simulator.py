@@ -3,12 +3,12 @@ from player import Player
 
 def run():
   players = [
-    Player(),
-    Player(),
-    Player(),
-    Player(),
-    Player(),
-    Player(),
+    Player(name='Kevin'),
+    Player(name='Will'),
+    Player(name='Scot'),
+    Player(name='Vidur'),
+    Player(name='Andrew'),
+    Player(name='Paul'),
   ]
 
   game = Game(players)
