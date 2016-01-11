@@ -24,13 +24,17 @@ class Game(object):
     self.phase = None
     self.wildlings = 0
 
-    self.houses        = PLAYER_MAP              # dict
-    self.order_tokens  = ORDER_TOKENS            # list of dicts
-    self.supply_map    = SUPPLY_MAP              # dict
-    self.supply_limits = STARTING_SUPPLY_LIMITS  # dict
-    self.supply_loads  = STARTING_SUPPLY_LOADS   # dict
-    self.victory       = STARTING_VICTORY        # dict
-    self.influence     = STARTING_INFLUENCE      # dict of dicts
+    self.houses         = PLAYER_MAP              # dict
+    self.order_tokens   = ORDER_TOKENS            # list of dicts
+    self.supply_map     = SUPPLY_MAP              # dict
+    self.supply_limits  = STARTING_SUPPLY_LIMITS  # dict
+    self.supply_loads   = STARTING_SUPPLY_LOADS   # dict
+    self.victory        = STARTING_VICTORY        # dict
+    self.influence      = STARTING_INFLUENCE      # dict of dicts
+    self.wildling_cards = shuffle(WILDLING_CARDS)
+    self.throne_holder  = self.influence['iron throne'][1]
+    self.sword_holder   = self.influence['fiefdom'][1]
+    self.raven_holder   = self.influence['kings court'][1]
 
     self.winner = None
 

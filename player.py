@@ -13,13 +13,11 @@ class Player(object):
     self.name          = name
     self.house         = None
     self.order_tokens  = list(ORDER_TOKENS)
-
     self.ship_units    = 5
     self.footmen_units = 5
     self.knights_units = 5
     self.siege_units   = 2
-
-    self.power_tokens = 0
+    self.power_tokens  = 5 # start with 5
 
     self.ai = ai
 

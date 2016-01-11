@@ -14,7 +14,7 @@ def run():
 
   game = Game(players)
   winner = game.run()
-  print winner
+  print 'winner is {}'.format(winner)
 
 if __name__ == '__main__':
   run()
