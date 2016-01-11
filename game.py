@@ -23,6 +23,11 @@ class Game(object):
     self.turn = 0
     self.phase = None
     self.wildlings = 0
+    self.no_raid_orders = 0
+    self.no_support_orders = 0
+    self.no_defense_orders = 0
+    self.no_consolidate_orders = 0
+    self.no_march_plus_one_orders = 0
 
     self.houses         = PLAYER_MAP              # dict
     self.order_tokens   = ORDER_TOKENS            # list of dicts
@@ -153,7 +158,7 @@ class Map(defaultdict):
 
   def create(self):
     '''
-    Initialize the Map object
+    Create the graph
     '''
 
     for name, t in self.territories.iteritems():
