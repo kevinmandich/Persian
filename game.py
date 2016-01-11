@@ -17,6 +17,11 @@ class Game(object):
   def __init__(self, players, ruleset='classic'):
 
     self.players = players
+    self.players_dict = {}
+
+    for p in self.players:
+      self.players_dict[p.name] = p
+
     self.ruleset = ruleset
     self.map = Map(territories)
 
@@ -85,18 +90,47 @@ class Game(object):
         territories[plan['source']].order_token = plan['data']['order']
 
   def action_phase(self):
+    print 'Action Phase'
     self.phase = 'Action'
-    #eventually order players by influence
 
-    #Resolve Raid
-    #Resolve March
-    #Resolve Consolidate
+    # self.resolve_orders('Raid')
+    # self.resolve_orders('March')
+    self.resolve_orders('Consolidate', self.resolve_consolidate)
 
-    for player in self.players:
-      player.move(self)
-      winner = self.check_winner()
-      if winner:
-        return
+    # Todo move inside march phase
+    winner = self.check_winner()
+    if winner:
+      print 'Game won early!'
+      return
+
+
+  def resolve_orders(self, action_phase, phase_resolver):
+    action_order = self.influence['iron throne']
+    while len(self.map.territories_with_order(action_phase)) > 0:
+
+      for i in range(1,6):
+        player_name = action_order[i]
+        player = self.players_dict[player_name]
+
+        if len(self.map.territories_for(player, action_phase)) > 0:
+
+          plans = player.move(self, action_phase=action_phase)
+
+          for plan in plans:
+            phase_resolver(plan, player)
+            territories[plan['source']].order_token = None
+
+
+  def resolve_consolidate(self, plan, player):
+    t = territories[plan['source']]
+    if plan['data']['type'] == 'consolidation':
+      power_tokens = t.consolidation + 1
+      player.power_tokens += power_tokens
+    elif plan['data']['type'] == 'muster':
+      print 'todo'
+
+
+
 
   def check_winner(self):
     winner = None
@@ -167,13 +201,26 @@ class Map(defaultdict):
         self[t.name][n.name] = t.type + '-' + n.type
         self[n.name][t.name] = n.type + '-' + t.type
 
-  def territories_for(self, player):
+  def territories_for(self, player, action_phase=None):
     player_territories = []
     for t in self.territories.itervalues():
       if t.owner and t.owner == player.name:
-        player_territories.append(t)
+        if action_phase:
+          if t.order_token and t.order_token['type'] == action_phase:
+            # print t.order_token['type']
+            player_territories.append(t)
+        else:
+          player_territories.append(t)
 
     return player_territories
+
+  def territories_with_order(self, action_phase):
+    territories = []
+    for t in self.territories.itervalues():
+      if t.order_token and t.order_token['type'] == action_phase:
+        territories.append(t)
+
+    return territories
 
 
 if __name__ == '__main__':
