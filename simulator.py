@@ -14,3 +14,6 @@ def run():
   game = Game(players)
   winner = game.run()
   print winner
+
+if __name__ == '__main__':
+  run()
