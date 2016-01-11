@@ -40,7 +40,7 @@ class Game(object):
     self.victory        = STARTING_VICTORY        # dict
     self.influence      = STARTING_INFLUENCE      # dict of dicts
     self.wildling_cards = shuffle(WILDLING_CARDS)
-    self.westeros_cards = { num : shuffle(deck) for num, deck in WESTEROS_CARDS }
+    # self.westeros_cards = { num : shuffle(deck) for num, deck in WESTEROS_CARDS.iteritems() }
     self.throne_holder  = self.influence['iron throne'][1]
     self.sword_holder   = self.influence['fiefdom'][1]
     self.raven_holder   = self.influence['kings court'][1]
@@ -61,7 +61,7 @@ class Game(object):
 
   def tick(self):
     self.turn += 1
-    print 'turn {}'.format(self.turn)
+    # print 'turn {}'.format(self.turn)
     if self.turn > 1:
       self.westeros_phase()
 
@@ -74,7 +74,7 @@ class Game(object):
       t.order_token = None
 
   def westeros_phase(self):
-
+    return
     self.phase = 'Westeros'
     for num in self.westeros_cards:
       card = self.westeros_cards[num][0]
@@ -105,9 +105,9 @@ class Game(object):
         self.no_defense_orders = 1 if card == 'no_defense_orders' else 0
         self.no_consolidate_orders = 1 if card == 'no_consolidate_orders' else 0
         self.no_march_plus_one_orders = 1 if card == 'no_march_plus_one_orders' else 0
-    
+
   def planning_phase(self):
-    print 'Planning Phase'
+    # print 'Planning Phase'
     self.phase = 'Planning'
     for player in self.players:
       plans = player.move(self)
@@ -116,7 +116,7 @@ class Game(object):
         territories[plan['source']].order_token = plan['data']['order']
 
   def action_phase(self):
-    print 'Action Phase'
+    # print 'Action Phase'
     self.phase = 'Action'
 
     self.resolve_orders('Raid', self.resolve_raid)
@@ -139,9 +139,9 @@ class Game(object):
         if len(self.map.territories_for(player, action_phase)) > 0:
 
           plans = player.move(self, action_phase=action_phase)
-          print '---------'
+          # print '---------'
           for plan in plans:
-            print "{} {}".format(player_name, plan['action'])
+            # print "{} {}".format(player_name, plan['action'])
             phase_resolver(plan, player)
 
 
@@ -153,9 +153,9 @@ class Game(object):
     if plan['data']['type'] == 'consolidation':
       power_tokens = t.consolidation + 1
       player.power_tokens += power_tokens
-      print "{} has {} power".format(player.name, player.power_tokens)
+      # print "{} has {} power".format(player.name, player.power_tokens)
     elif plan['data']['type'] == 'muster':
-      print 'todo'
+      pass# print 'todo'
 
   def resolve_raid(self, plan, player):
     t1 = territories[plan['source']]
@@ -163,19 +163,19 @@ class Game(object):
 
     if t2:
       if t2.order_token['type'] in ['Raid', 'Support']:
-        print "{} loses order {}".format(t2.owner, t2.order_token['type'])
+        # print "{} loses order {}".format(t2.owner, t2.order_token['type'])
         t2.order_token = None
       elif t2.order_token == 'Consolidate':
-        print "{} loses order {} and power token".format(t2.owner, t2.order_token['type'])
+        # print "{} loses order {} and power token".format(t2.owner, t2.order_token['type'])
         t2.order_token = None
         players_dict[t1.owner].power_tokens += 1
         if players_dict[t2.owner].power_tokens > 0:
           players_dict[t2.owner].power_tokens -= 1
       elif t2.order_token['type'] == 'Defense' and t1.order_token['stars'] > 0:
-        print "{} loses order {}".format(t2.owner, t2.order_token['type'])
+        # print "{} loses order {}".format(t2.owner, t2.order_token['type'])
         t2.order_token = None
     else:
-      print 'Raid useless'
+      pass# print 'Raid useless'
 
   def resolve_march(self, plan, player):
     t1 = territories[plan['source']]
@@ -183,7 +183,7 @@ class Game(object):
     if t2:
       self.battle(t1,t2, plan['data'].get('leave_token'))
     else:
-      print 'March useless'
+      pass# print 'March useless'
 
   def battle(self, t1, t2, leave_token):
       defend_power = t2.knight * 2 + t2.footmen + t2.ships + t2.castles
@@ -199,7 +199,7 @@ class Game(object):
 
       #TODO influence on ties, cards, tides of battle
       if attack_power > defend_power:
-        print "{} beat {} and won {} castles".format(t1.owner, t2.owner, t2.castles)
+        # print "{} beat {} and won {} castles".format(t1.owner, t2.owner, t2.castles)
         t2.owner = t1.owner
         t2.knight = t1.knight
         t2.footmen = t1.footmen
@@ -214,7 +214,7 @@ class Game(object):
           t1.power_token = 1
           attacker.power_tokens -= 1
       else:
-        print "{} lost to {}".format(t1.owner, t2.owner)
+        pass# print "{} lost to {}".format(t1.owner, t2.owner)
 
 
   def check_winner(self):
@@ -246,7 +246,7 @@ class Game(object):
     while self.turn < 10 and not self.winner:
       self.tick()
 
-    return self.check_winner()
+    return self.players_dict[self.check_winner()]
 
 
 
