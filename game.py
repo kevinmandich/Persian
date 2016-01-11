@@ -8,7 +8,8 @@ from fixed import *
 
 class Game(object):
   '''
-  The Game object keeps track of the game state.
+  The Game object is the engine which keeps track of the game state
+  and provides a means of running the game.
   '''
 
   def __init__(self, players, ruleset='classic'):
@@ -19,9 +20,13 @@ class Game(object):
     self.turn = 1
     self.phase = None
     self.wildlings = 0
-    self.order_tokens = ORDER_TOKENS
+    self.order_tokens = ORDER_TOKENS             # list of dicts
 
-    # self.supply_track =
+    self.supply_map = SUPPLY_MAP                 # dict
+    self.supply_limits = STARTING_SUPPLY_LIMITS  # dict
+    self.supply_loads = STARTING_SUPPLY_LOADS    # dict
+    self.victory = STARTING_VICTORY              # dict
+    self.influence = STARTING_INFLUENCE          # dict of dicts
 
     self.winner = None
 
@@ -124,6 +129,9 @@ class Map(defaultdict):
         print '    {} - {}'.format(t2, self[t1][t2])
 
   def create(self):
+    '''
+    Initialize the Map object
+    '''
 
     for name, t in self.territories.iteritems():
       for neighbor in t.neighbors:
