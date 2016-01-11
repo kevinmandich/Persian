@@ -93,22 +93,20 @@ class Game(object):
     print 'Action Phase'
     self.phase = 'Action'
 
-    # self.resolve_orders('Raid')
+    self.resolve_orders('Raid', self.resolve_raid)
     # self.resolve_orders('March')
     self.resolve_orders('Consolidate', self.resolve_consolidate)
 
     # Todo move inside march phase
     winner = self.check_winner()
     if winner:
-      print 'Game won early!'
       return
 
 
   def resolve_orders(self, action_phase, phase_resolver):
     action_order = self.influence['iron throne']
     while len(self.map.territories_with_order(action_phase)) > 0:
-
-      for i in range(1,6):
+      for i in range(1,7):
         player_name = action_order[i]
         player = self.players_dict[player_name]
 
@@ -118,7 +116,8 @@ class Game(object):
 
           for plan in plans:
             phase_resolver(plan, player)
-            territories[plan['source']].order_token = None
+
+          territories[plans[0]['source']].order_token = None
 
 
   def resolve_consolidate(self, plan, player):
@@ -128,6 +127,26 @@ class Game(object):
       player.power_tokens += power_tokens
     elif plan['data']['type'] == 'muster':
       print 'todo'
+
+  def resolve_raid(self, plan, player):
+    t1 = territories[plan['source']]
+    t2 = territories.get(plan['data']['target'])
+
+    if t2:
+      if t2.order_token['type'] in ['Raid', 'Support']:
+        t2.order_token = None
+      elif t2.order_token == 'Consolidate':
+        t2.order_token = None
+        players_dict[t1.owner].power_tokens += 1
+        if players_dict[t2.owner].power_tokens > 0:
+          players_dict[t2.owner].power_tokens -= 1
+      elif t2.order_token['type'] == 'Defense' and t1.order_token['stars'] > 0:
+        t2.order_token = None
+
+
+
+  def resolve_march(self, plan, player):
+    t = territories[plan['source']]
 
 
 

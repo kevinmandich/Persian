@@ -68,15 +68,26 @@ class RandomAi(object):
     return plan_moves
 
 
-  def raid_move(self, game, player, territories):
-    return [{'action': 'action', 'source': territories[0].name, 'data': {'target': 'todo'}}]
+  def raid_move(self, game, player, my_territories):
+    neighbors = []
+    for t in my_territories:
+      for n in t.neighbors:
+        neighbor = game.map.territories[n]
+        if neighbor.order_token and neighbor.owner != player.name:
+          neighbors.append(n)
 
-  def consolidate_move(self, game, player, territories):
-    return [{'action': 'action', 'source': territories[0].name, 'data': {'type': 'consolidation'}}]
+    if len(neighbors) > 0:
+      return [{'action': 'action', 'source': my_territories[0].name, 'data': {'target': neighbors.pop()}}]
+    else:
+      return [{'action': 'action', 'source': my_territories[0].name, 'data': {'target': ''}}]
+
+
+  def consolidate_move(self, game, player, my_territories):
+    return [{'action': 'action', 'source': my_territories[0].name, 'data': {'type': 'consolidation'}}]
     # return [{'action': 'action', 'source': territories[0].name, 'data': {'type': 'muster'}}]
 
-  def march_move(self, game, player, territories):
-    return [{'action': 'action', 'source': territories[0].name, 'data': {'target': 'todo'}}]
+  def march_move(self, game, player, my_territories):
+    return [{'action': 'action', 'source': my_territories[0].name, 'data': {'target': 'todo'}}]
 
 
 

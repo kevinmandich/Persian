@@ -26,6 +26,12 @@ class Territory(object):
     self.portShips      = portShips     # int
     self.order_token    = None          # dict (None)
 
+  def __str__(self):
+     s = self.name + ': '
+     s += self.owner + ' '
+     s += str(self.order_token)
+     return s
+
 base = [ \
 Territory(name='Bay of Ice', \
           type_='sea', \
