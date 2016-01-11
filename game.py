@@ -54,6 +54,11 @@ class Game(object):
 
     self.planning_phase()
     self.action_phase()
+    self.clear()
+
+  def clear(self):
+    for t in territories.itervalues():
+      t.order_token = None
 
   def westeros_phase(self):
     self.phase = 'Westeros'
@@ -66,7 +71,9 @@ class Game(object):
     self.phase = 'Planning'
     for player in self.players:
       plans = player.move(self)
-      print plans
+      ## TODO break out
+      for plan in plans:
+        territories[plan['source']].order_token = plan['data']['order']
 
   def action_phase(self):
     self.phase = 'Action'

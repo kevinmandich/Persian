@@ -24,6 +24,7 @@ class Territory(object):
     self.siege          = siege         # int
     self.ships          = ships         # int
     self.portShips      = portShips     # int
+    self.order_token    = None          # dict (None)
 
 base = [ \
 Territory(name='Bay of Ice', \
