@@ -24,6 +24,7 @@ class Territory(object):
     self.siege          = siege         # int
     self.ships          = ships         # int
     self.portShips      = portShips     # int
+    self.order_token    = None          # dict (None)
 
 base = [ \
 Territory(name='Bay of Ice', \
@@ -34,7 +35,7 @@ Territory(name='Bay of Ice', \
           port=0, \
           adjacent_port=1, \
           garrison=0, \
-          owner='Kevin', \
+          owner=None, \
           neighbors=['Castle Black','Winterfell','The Stony Shore','Sunset Sea','Flints Finger','Greywater Watch'], \
           footmen=0, \
           knight=0, \

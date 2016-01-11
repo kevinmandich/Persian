@@ -1,14 +1,15 @@
 from game import Game
 from player import Player
+from player import RandomAi
 
 def run():
   players = [
-    Player(name='Kevin'),
-    Player(name='Will'),
-    Player(name='Scot'),
-    Player(name='Vidur'),
-    Player(name='Andrew'),
-    Player(name='Paul'),
+    Player('martell', RandomAi()),
+    Player('baratheon',  RandomAi()),
+    Player('tyrell',  RandomAi()),
+    Player('lannister', RandomAi()),
+    Player('greyjoy',RandomAi()),
+    Player('stark',  RandomAi()),
   ]
 
   game = Game(players)
