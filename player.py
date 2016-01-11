@@ -70,24 +70,37 @@ class RandomAi(object):
 
   def raid_move(self, game, player, my_territories):
     neighbors = []
+    #TODO include more source territories to look at
+    # for t in my_territories:
     for t in my_territories:
       for n in t.neighbors:
         neighbor = game.map.territories[n]
         if neighbor.order_token and neighbor.owner != player.name:
-          neighbors.append(n)
+          neighbors.append({'neighbor': n, 'source': t.name})
 
     if len(neighbors) > 0:
-      return [{'action': 'action', 'source': my_territories[0].name, 'data': {'target': neighbors.pop()}}]
+      plan = neighbors.pop()
+      return [{'action': 'Raid', 'source': plan['source'], 'data': {'target': plan['neighbor']}}]
     else:
-      return [{'action': 'action', 'source': my_territories[0].name, 'data': {'target': ''}}]
+      return [{'action': 'Raid', 'source': my_territories[0].name, 'data': {'target': ''}}]
 
 
   def consolidate_move(self, game, player, my_territories):
-    return [{'action': 'action', 'source': my_territories[0].name, 'data': {'type': 'consolidation'}}]
+    return [{'action': 'Consolidate', 'source': my_territories[0].name, 'data': {'type': 'consolidation'}}]
     # return [{'action': 'action', 'source': territories[0].name, 'data': {'type': 'muster'}}]
 
   def march_move(self, game, player, my_territories):
-    return [{'action': 'action', 'source': my_territories[0].name, 'data': {'target': 'todo'}}]
+    neighbors = []
+    # for t in my_territories:
+    for t in [my_territories[0]]:
+      for n in t.neighbors:
+        neighbor = game.map.territories[n]
+        if neighbor.owner != player.name:
+          neighbors.append(n)
+    if len(neighbors) > 0:
+      return [{'action': 'March', 'source': my_territories[0].name, 'data': {'target': neighbors.pop()}}]
+    else:
+      return [{'action': 'March', 'source': my_territories[0].name, 'data': {'target': ''}}]
 
 
 

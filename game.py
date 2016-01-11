@@ -47,6 +47,10 @@ class Game(object):
 
     self.assign_houses()
 
+  def __str__(self):
+    s = ''
+    return s
+
 
   def assign_houses(self):
 
@@ -116,7 +120,7 @@ class Game(object):
     self.phase = 'Action'
 
     self.resolve_orders('Raid', self.resolve_raid)
-    # self.resolve_orders('March')
+    self.resolve_orders('March', self.resolve_march)
     self.resolve_orders('Consolidate', self.resolve_consolidate)
 
     # Todo move inside march phase
@@ -135,9 +139,11 @@ class Game(object):
         if len(self.map.territories_for(player, action_phase)) > 0:
 
           plans = player.move(self, action_phase=action_phase)
-
+          print '---------'
           for plan in plans:
+            print "{} {}".format(player_name, plan['action'])
             phase_resolver(plan, player)
+
 
           territories[plans[0]['source']].order_token = None
 
@@ -147,6 +153,7 @@ class Game(object):
     if plan['data']['type'] == 'consolidation':
       power_tokens = t.consolidation + 1
       player.power_tokens += power_tokens
+      print "{} has {} power".format(player.name, player.power_tokens)
     elif plan['data']['type'] == 'muster':
       print 'todo'
 
@@ -156,21 +163,58 @@ class Game(object):
 
     if t2:
       if t2.order_token['type'] in ['Raid', 'Support']:
+        print "{} loses order {}".format(t2.owner, t2.order_token['type'])
         t2.order_token = None
       elif t2.order_token == 'Consolidate':
+        print "{} loses order {} and power token".format(t2.owner, t2.order_token['type'])
         t2.order_token = None
         players_dict[t1.owner].power_tokens += 1
         if players_dict[t2.owner].power_tokens > 0:
           players_dict[t2.owner].power_tokens -= 1
       elif t2.order_token['type'] == 'Defense' and t1.order_token['stars'] > 0:
+        print "{} loses order {}".format(t2.owner, t2.order_token['type'])
         t2.order_token = None
-
-
+    else:
+      print 'Raid useless'
 
   def resolve_march(self, plan, player):
-    t = territories[plan['source']]
+    t1 = territories[plan['source']]
+    t2 = territories.get(plan['data']['target'])
+    if t2:
+      self.battle(t1,t2, plan['data'].get('leave_token'))
+    else:
+      print 'March useless'
 
+  def battle(self, t1, t2, leave_token):
+      defend_power = t2.knight * 2 + t2.footmen + t2.ships + t2.castles
+      attack_power = t1.knight * 2 + t1.footmen + t1.ships + t1.siege
 
+      # TODO ask others to join sides
+      for t in t2.neighbors:
+        support_t = self.map.territories[t]
+        if support_t.owner != None and support_t.owner == t2.owner and support_t.order_token and support_t.order_token['type'] == 'Support':
+          defend_power += support_t.knight * 2 + support_t.footmen + support_t.ships
+        elif support_t.owner == t1.owner and support_t.order_token and support_t.order_token['type'] == 'Support':
+          attack_power += support_t.knight * 2 + support_t.footmen + support_t.ships
+
+      #TODO influence on ties, cards, tides of battle
+      if attack_power > defend_power:
+        print "{} beat {} and won {} castles".format(t1.owner, t2.owner, t2.castles)
+        t2.owner = t1.owner
+        t2.knight = t1.knight
+        t2.footmen = t1.footmen
+        t2.ships = t1.ships
+        t2.siege = t1.siege
+        t1.knight = 0
+        t1.footmen = 0
+        t1.ships = 0
+        t1.siege = 0
+        attacker = self.players_dict[t1.owner]
+        if leave_token and attacker.power_tokens > 0:
+          t1.power_token = 1
+          attacker.power_tokens -= 1
+      else:
+        print "{} lost to {}".format(t1.owner, t2.owner)
 
 
   def check_winner(self):
