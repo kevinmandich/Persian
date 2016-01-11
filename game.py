@@ -17,14 +17,12 @@ class Game(object):
   def __init__(self, players, ruleset='classic'):
 
     self.players = players
-    self.players_dict = {}
-
-    for p in self.players:
-      self.players_dict[p.name] = p
+    self.players_dict = { p.name : p for p in self.players }
 
     self.ruleset = ruleset
     self.map = Map(territories)
 
+    self.winner = None
     self.turn = 0
     self.phase = None
     self.wildlings = 0
@@ -42,11 +40,10 @@ class Game(object):
     self.victory        = STARTING_VICTORY        # dict
     self.influence      = STARTING_INFLUENCE      # dict of dicts
     self.wildling_cards = shuffle(WILDLING_CARDS)
+    self.westeros_cards = { num : shuffle(deck) for num, deck in WESTEROS_CARDS }
     self.throne_holder  = self.influence['iron throne'][1]
     self.sword_holder   = self.influence['fiefdom'][1]
     self.raven_holder   = self.influence['kings court'][1]
-
-    self.winner = None
 
     self.assign_houses()
 
@@ -56,8 +53,6 @@ class Game(object):
     shuffle(self.houses)
     for index in self.houses:
       self.players[index].house = self.houses[index]
-
-    return None
 
 
   def tick(self):
@@ -75,11 +70,38 @@ class Game(object):
       t.order_token = None
 
   def westeros_phase(self):
-    self.phase = 'Westeros'
-    #TODO
-    # for player in self.players:
-    #   player.move(self)
 
+    self.phase = 'Westeros'
+    for num in self.westeros_cards:
+      card = self.westeros_cards[num][0]
+      self.westeros_cards[num].rotate(-1)
+      if card == 'muster':
+        pass
+      if card == 'supply':
+        pass
+      if card == 'bid':
+        pass
+      if card == 'consolidate':
+        pass
+      if card == 'raven_holder':
+        pass
+      if card == 'sword_holder':
+        pass
+      if card == 'throne_holder':
+        pass
+      if card == 'wildlings':
+        pass
+      if card == 'shuffle': # in this case we'll need to draw the respective card again
+        pass
+      if card == 'nothing':
+        pass # actually pass
+      if num == 3:
+        self.no_raid_orders = 1 if card == 'no_raid_orders' else 0
+        self.no_support_orders = 1 if card == 'no_support_orders' else 0
+        self.no_defense_orders = 1 if card == 'no_defense_orders' else 0
+        self.no_consolidate_orders = 1 if card == 'no_consolidate_orders' else 0
+        self.no_march_plus_one_orders = 1 if card == 'no_march_plus_one_orders' else 0
+    
   def planning_phase(self):
     print 'Planning Phase'
     self.phase = 'Planning'
