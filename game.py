@@ -12,7 +12,8 @@ from player import Player
 class Game(object):
   '''
   The Game object is the engine which keeps track of the game state
-  and provides a means of running the game.
+  and provides a means of running the game. Base class if a defaultdict
+  of dicts.
   '''
 
   def __init__(self, players, ruleset='classic'):
@@ -50,6 +51,7 @@ class Game(object):
     self.westeros_cards = WESTEROS_CARDS
 
     self.assign_houses()
+    self.houses_dict = { p.house : p for p in self.players }
 
   def __str__(self):
     s = '\nPlayers:'
@@ -89,14 +91,35 @@ class Game(object):
       t.order_token = None
 
   def reconcile_supply(self):
-    supplies = self.map.owned_supplies(self.players)
+
+    def over_supply_limit(house):
+      limits = sorted(self.supply_map[self.supply_limits[house]], reverse=True)
+      print 'limits = {}'.format(limits)
+      loads = sorted(self.supply_loads[house], reverse=True)
+      print 'loads = {}'.format(loads)
+      if len(loads) > len(limits):
+        print 'over supply limit!'
+        return 1
+      for i in range(len(loads)):
+        if loads[i] > limits[i]:
+          print 'over supply limit!'
+          return 1
+      return 0
+
+    self.supply_limits = self.map.owned_supplies(self.players)
+    for house in self.houses_dict:
+      if over_supply_limit(house):
+        self.supply_loads[house] = self.houses_dict[house].reconcile_supply_limit(self, )
 
   def westeros_phase(self):
-    return
     self.phase = 'Westeros'
-    for num in self.westeros_cards:
+
+    def draw_card(num):
       card = self.westeros_cards[num][0]
       self.westeros_cards[num].rotate(-1)
+      return card
+
+    def resolve_card(card, num):
       if card == 'muster':
         pass
       if card == 'supply':
@@ -113,8 +136,10 @@ class Game(object):
         pass
       if card == 'wildlings':
         pass
-      if card == 'shuffle': # in this case we'll need to draw the respective card again
-        pass
+      if card == 'shuffle': # draw the respective card again
+        shuffle(self.westeros_cards[num])
+        draw_card(num)
+        resolve_card(card, num)
       if card == 'nothing':
         pass # actually pass
       if num == 3:
@@ -123,6 +148,14 @@ class Game(object):
         self.no_defense_orders = 1 if card == 'no_defense_orders' else 0
         self.no_consolidate_orders = 1 if card == 'no_consolidate_orders' else 0
         self.no_march_plus_one_orders = 1 if card == 'no_march_plus_one_orders' else 0
+      return None
+
+    for num in self.westeros_cards:
+      card = draw_card(num)
+      resolve_card(card, num)
+
+
+
 
   def planning_phase(self):
     # print 'Planning Phase'

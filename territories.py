@@ -25,6 +25,7 @@ class Territory(object):
     self.ships          = ships         # int
     self.portShips      = portShips     # int
     self.order_token    = None          # dict (None)
+    self.power_token    = 0
 
   def __str__(self):
      s = self.name + ': '

@@ -44,6 +44,9 @@ class RandomAi(object):
     self.name = name
 
 
+  def reconcile_supply_limit(self, game, player):
+    pass
+
 
   def planning_move(self, game, player):
     my_territories = game.map.territories_for(player)
