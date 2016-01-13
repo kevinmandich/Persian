@@ -1,19 +1,20 @@
 from game import Game
 from player import Player
-from player import RandomAi, SimpleAi
+from ai import *
 
 def run():
   results = {}
 
+  ai_module = SimpleAI
 
   for i in range(0,1000):
     players = [
-      Player('martell',   RandomAi('random-martell')),
-      Player('baratheon', RandomAi('random-baratheon')),
-      Player('tyrell',    RandomAi('random-tyrell')),
-      Player('lannister', RandomAi('random-lannister')),
-      Player('greyjoy',   RandomAi('random-greyjoy')),
-      Player('stark',     RandomAi('random-stark')),
+      Player('martell',   ai_module('random-martell')),
+      Player('baratheon', ai_module('random-baratheon')),
+      Player('tyrell',    ai_module('random-tyrell')),
+      Player('lannister', ai_module('random-lannister')),
+      Player('greyjoy',   ai_module('random-greyjoy')),
+      Player('stark',     ai_module('random-stark')),
     ]
 
     game = Game(players)

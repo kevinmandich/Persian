@@ -8,6 +8,7 @@ from random import shuffle
 from territories import *
 from fixed import *
 from player import Player
+from ai import *
 
 class Game(object):
   '''
@@ -19,6 +20,7 @@ class Game(object):
   def __init__(self, players, ruleset='classic'):
 
     self.players = players
+    self.num_players = len(players)
     self.players_dict = { p.name : p for p in self.players }
     self.ruleset = ruleset
     self.map = Map(copy.deepcopy(territories))
@@ -54,19 +56,25 @@ class Game(object):
     self.houses_dict = { p.house : p for p in self.players }
 
   def __str__(self):
-    s = '\nPlayers:'
+    s = '\nTurn:\n  {}'.format(self.turn)
+    s += '\n\nPhase:\n  {}'.format(self.phase)
+    s += '\n\nPlayers:'
     for k, v in self.players_dict.iteritems():
       s += '\n  {}: {} ... AI module: {}'.format(k, v.house, v.ai)
     s += '\n\nWinner:\n  {}'.format(self.winner)
     s += '\n\nRuleset:\n  {}'.format(self.ruleset)
-    s += '\n\nTurn:\n  {}'.format(self.turn)
-    s += '\n\nPhase:\n  {}'.format(self.phase)
     s += '\n\nWildlings:\n  {}'.format(self.wildlings)
     s += '\n\nInfluence:'
     for influence in self.influence:
       s += '\n  {}:'.format(influence)
       for place, player in self.influence[influence].iteritems():
         s += '\n    {}: {}'.format(place, player)
+    s += '\n\nOwned Territories:'
+    ot = self.map.owned_territories(self.players)
+    for house in ot:
+      s += '\n  ' + house
+      for t in ot[house]:
+        s += '\n    ' + t
     return s
 
 
@@ -93,23 +101,64 @@ class Game(object):
   def reconcile_supply(self):
 
     def over_supply_limit(house):
+      print '\nhouse: {}'.format(house)
       limits = sorted(self.supply_map[self.supply_limits[house]], reverse=True)
-      print 'limits = {}'.format(limits)
+      print '  limits = {}'.format(limits)
       loads = sorted(self.supply_loads[house], reverse=True)
-      print 'loads = {}'.format(loads)
+      print '  loads = {}'.format(loads)
       if len(loads) > len(limits):
-        print 'over supply limit!'
+        print '    over supply limit!'
         return 1
       for i in range(len(loads)):
         if loads[i] > limits[i]:
-          print 'over supply limit!'
+          print '    over supply limit!'
           return 1
       return 0
 
-    self.supply_limits = self.map.owned_supplies(self.players)
+    self.supply_limits = self.map.owned_supplies(self.players) # reset supply limits
     for house in self.houses_dict:
       if over_supply_limit(house):
-        self.supply_loads[house] = self.houses_dict[house].reconcile_supply_limit(self, )
+        self.supply_loads[house] = self.houses_dict[house].reconcile_supply_limit(self)
+
+  def bid_influence(self):
+
+    def reconcile_ties(tying_houses):
+      iron_throne_holder = self.houses_dict[self.influence['iron throne'][1]]
+      return iron_throne_holder.determine_bid_tie_order(self, tying_houses)
+
+    for influence in g.influence:
+      bids = {}
+      for house in self.houses_dict:
+        bids[house] = self.houses_dict[house].bid_on_influence(self, influence) # { 'tyrell':3, 'greyjoy':5, ... }
+      bids = sorted(zip(bids.values(),bids.keys()), reverse=True)
+      index = 0
+      new_positions = []
+      while True:
+        tying_houses = []
+        if bids[index][0] == bids[index+1][0]:
+          tying_houses.extend([bids[index][1], bids[index+1][1]])
+          while True:
+            index += 1
+            if index >= len(bids) - 1:
+              new_positions.extend(reconcile_ties(tying_houses))
+              break
+            if bids[index][0] == bids[index+1][0]:
+              tying_houses.append(bids[index+1][1])
+            else:
+              new_positions.extend(reconcile_ties(tying_houses))
+              break
+        else:
+          new_positions.append(bids[index][1])
+        index += 1
+        if index == len(bids) - 1:
+          new_positions.append(bids[index][1])
+          break
+        if index > len(bids) - 1:
+          break
+      for i in self.influence[influence]:
+        self.influence[influence][i] = new_positions[i-1]
+
+
 
   def westeros_phase(self):
     self.phase = 'Westeros'
@@ -125,7 +174,7 @@ class Game(object):
       if card == 'supply':
         self.reconcile_supply()
       if card == 'bid':
-        pass
+        self.bid_influence()
       if card == 'consolidate':
         pass
       if card == 'raven_holder':
@@ -183,7 +232,7 @@ class Game(object):
   def resolve_orders(self, action_phase, phase_resolver):
     action_order = self.influence['iron throne']
     while len(self.map.territories_with_order(action_phase)) > 0:
-      for i in range(1,7):
+      for i in range(1, self.num_players + 1):
         player_name = action_order[i]
         player = self.players_dict[player_name]
 
@@ -375,13 +424,15 @@ class Map(defaultdict):
 
 if __name__ == '__main__':
 
+  ai_module = SimpleAI
+
   players = [
-    Player(name='Kevin'),
-    Player(name='Will'),
-    Player(name='Scot'),
-    Player(name='Vidur'),
-    Player(name='Andrew'),
-    Player(name='Paul'),
+    Player('martell',   ai_module('random-martell')),
+    Player('baratheon', ai_module('random-baratheon')),
+    Player('tyrell',    ai_module('random-tyrell')),
+    Player('lannister', ai_module('random-lannister')),
+    Player('greyjoy',   ai_module('random-greyjoy')),
+    Player('stark',     ai_module('random-stark')),
   ]
   g = Game(players=players, ruleset='classic')
 
