@@ -158,7 +158,15 @@ class Game(object):
       for i in self.influence[influence]:
         self.influence[influence][i] = new_positions[i-1]
 
-
+  def consolidate_power(self):
+    # gettin' paid
+    tokens_to_allocate = self.map.owned_consolidation(self.players)
+    for house, tokens in tokens_to_allocate.iteritems():
+      player = self.houses_dict[house]
+      if tokens + player.power_tokens + player.map_power_tokens > 20:
+        player.power_tokens = 20
+      else:
+        player.power_tokens += tokens
 
   def westeros_phase(self):
     self.phase = 'Westeros'
@@ -176,7 +184,7 @@ class Game(object):
       if card == 'bid':
         self.bid_influence()
       if card == 'consolidate':
-        pass
+        self.consolidate_power()
       if card == 'raven_holder':
         pass
       if card == 'sword_holder':
@@ -228,7 +236,6 @@ class Game(object):
     if winner:
       return
 
-
   def resolve_orders(self, action_phase, phase_resolver):
     action_order = self.influence['iron throne']
     while len(self.map.territories_with_order(action_phase)) > 0:
@@ -246,7 +253,6 @@ class Game(object):
 
 
           territories[plans[0]['source']].order_token = None
-
 
   def resolve_consolidate(self, plan, player):
     t = territories[plan['source']]
@@ -315,6 +321,10 @@ class Game(object):
           attacker.power_tokens -= 1
       else:
         pass# print "{} lost to {}".format(t1.owner, t2.owner)
+
+  def print_power_tokens(self):
+    for house, player in self.houses_dict.iteritems():
+      print '{} : {} power tokens'.format(house, player.power_tokens)
 
 
   def check_winner(self):
@@ -420,6 +430,13 @@ class Map(defaultdict):
       if t.owner:
         sl[t.owner] += t.supplies
     return sl
+
+  def owned_consolidation(self, players):
+    c = { p.house : 0 for p in players }
+    for t in self.territories.itervalues():
+      if t.owner:
+        c[t.owner] += t.consolidation
+    return c
 
 
 if __name__ == '__main__':

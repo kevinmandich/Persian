@@ -7,16 +7,17 @@ class Player(object):
 
   def __init__(self, name, ai=None):
 
-    self.name          = name
-    self.house         = None
-    self.order_tokens  = list(ORDER_TOKENS)
-    self.ship_units    = 5
-    self.footmen_units = 5
-    self.knights_units = 5
-    self.siege_units   = 2
-    self.power_tokens  = 5 # start with 5
+    self.name             = name
+    self.house            = None
+    self.order_tokens     = list(ORDER_TOKENS)
+    self.ship_units       = 5
+    self.footmen_units    = 5
+    self.knights_units    = 5
+    self.siege_units      = 2
+    self.power_tokens     = 5 # start with 5
+    self.map_power_tokens = 0
 
-    self.ai            = ai
+    self.ai               = ai
 
   def __str__(self):
     return 'Player class for player {} playing house {}'.format(self.name, self.house)
