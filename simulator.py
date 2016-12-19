@@ -16,6 +16,8 @@ def run():
       Player('greyjoy',   ai_module('random-greyjoy')),
       Player('stark',     ai_module('random-stark')),
     ]
+    if i % 100 == 0:
+      print 'Game {}'.format(i)
 
     game = Game(players)
     winner = game.run()

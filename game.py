@@ -101,17 +101,17 @@ class Game(object):
   def reconcile_supply(self):
 
     def over_supply_limit(house):
-      print '\nhouse: {}'.format(house)
+      #print '\nhouse: {}'.format(house)
       limits = sorted(self.supply_map[self.supply_limits[house]], reverse=True)
-      print '  limits = {}'.format(limits)
+      #print '  limits = {}'.format(limits)
       loads = sorted(self.supply_loads[house], reverse=True)
-      print '  loads = {}'.format(loads)
+      #print '  loads = {}'.format(loads)
       if len(loads) > len(limits):
-        print '    over supply limit!'
+        #print '    over supply limit!'
         return 1
       for i in range(len(loads)):
         if loads[i] > limits[i]:
-          print '    over supply limit!'
+          #print '    over supply limit!'
           return 1
       return 0
 
@@ -126,7 +126,7 @@ class Game(object):
       iron_throne_holder = self.houses_dict[self.influence['iron throne'][1]]
       return iron_throne_holder.determine_bid_tie_order(self, tying_houses)
 
-    for influence in g.influence:
+    for influence in self.influence:
       bids = {}
       for house in self.houses_dict:
         bids[house] = self.houses_dict[house].bid_on_influence(self, influence) # { 'tyrell':3, 'greyjoy':5, ... }
@@ -195,7 +195,7 @@ class Game(object):
         pass
       if card == 'shuffle': # draw the respective card again
         shuffle(self.westeros_cards[num])
-        draw_card(num)
+        card = draw_card(num)
         resolve_card(card, num)
       if card == 'nothing':
         pass # actually pass
