@@ -36,13 +36,12 @@ STARTING_SUPPLY_LOADS = {'greyjoy':[2],'tyrell':[2],'martell':[2],'lannister':[2
 
 STARTING_VICTORY = {'greyjoy':1,'tyrell':1,'martell':1,'lannister':1,'baratheon':1,'stark':2}
 
-WILDLING_CARDS = deque([{'lowest':'self.players[lowest_bidder].power_tokens = 0',
-                         'all':'for p in self.players:\n  if p.power_tokens <= 2:\n    p.power_tokens = 0\n  else:\n    p.power_tokens -= 2',
-                         'highest':'self.players[highest_bidder_power_tokens.keys()[0]].power_tokens = highest_bidder_power_tokens.values()[0]'},
-                  ])
-
 WESTEROS_CARDS = { \
                   1:deque(['muster','muster','muster','supply','supply','supply','throne_holder','throne_holder','shuffle','nothing']), \
                   2:deque(['bid','bid','bid','consolidate','consolidate','consolidate','raven_holder','raven_holder','shuffle','nothing']), \
                   3:deque(['wildlings','wildlings','wildlings','sword_holder','sword_holder','no_raid_orders','no_defense_orders','no_support_orders','no_consolidate_orders','no_march_plus_one_orders']) \
                   }
+
+# TODO add all 9 cards
+# https://dl.dropboxusercontent.com/u/80803994/wildlings.png
+WILDLING_CARDS = deque(['skinchanger_scout'])

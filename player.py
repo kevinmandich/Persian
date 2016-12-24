@@ -18,6 +18,7 @@ class Player(object):
     self.map_power_tokens = 0
 
     self.ai               = ai
+    self.ai.player        = self
 
   def __str__(self):
     return 'Player class for player {} playing house {}'.format(self.name, self.house)
@@ -38,7 +39,7 @@ class Player(object):
     return self.ai.reconcile_supply_limit(game)
 
   def bid_on_influence(self, game, influence):
-    return self.ai.bid_on_influence(game, influence)
+    return self.ai.bid_on_influence(game, influence, self)
 
   def determine_bid_tie_order(self, game, tying_houses):
     return self.ai.determine_bid_tie_order(game, tying_houses)

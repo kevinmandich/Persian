@@ -27,6 +27,9 @@ class Territory(object):
     self.order_token    = None          # dict (None)
     self.power_token    = 0
 
+  def has_unit(self):
+     return (self.footmen + self.knight + self.siege + self.ships) > 0
+
   def __str__(self):
      s = self.name + ': '
      s += self.owner + ' '

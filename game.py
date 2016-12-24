@@ -1,6 +1,9 @@
+import pdb
 import os
 import time
 import copy
+import logging
+import sys
 
 from collections import defaultdict
 from random import shuffle
@@ -10,6 +13,10 @@ from fixed import *
 from player import Player
 from ai import *
 
+log_level = logging.WARN # Change to debug, info, or warn
+logging.basicConfig(stream=sys.stdout, level=log_level)
+logger = logging.getLogger()
+
 class Game(object):
   '''
   The Game object is the engine which keeps track of the game state
@@ -18,22 +25,9 @@ class Game(object):
   '''
 
   def __init__(self, players, ruleset='classic'):
-
     self.players = players
     self.num_players = len(players)
-    self.players_dict = { p.name : p for p in self.players }
     self.ruleset = ruleset
-    self.map = Map(copy.deepcopy(territories))
-
-    self.winner = None
-    self.turn = 0
-    self.phase = None
-    self.wildlings = 0
-    self.no_raid_orders = 0
-    self.no_support_orders = 0
-    self.no_defense_orders = 0
-    self.no_consolidate_orders = 0
-    self.no_march_plus_one_orders = 0
 
     self.houses         = PLAYER_MAP              # dict
     self.order_tokens   = ORDER_TOKENS            # list of dicts
@@ -43,38 +37,112 @@ class Game(object):
     self.victory        = STARTING_VICTORY        # dict
     self.influence      = STARTING_INFLUENCE      # dict of dicts
 
+    self.winner = None
+    self.leader = None
+    self.phase = None
+    self.no_raid_orders = 0
+    self.no_support_orders = 0
+    self.no_defense_orders = 0
+    self.no_consolidate_orders = 0
+    self.no_march_plus_one_orders = 0
+
+    # 1 Make the board (map)
+    self.map = Map(copy.deepcopy(territories))
+
+    # 2. Prepare the Wildling Deck and Wildling Threat
+    # Token: Shuffle the Wildling cards to form a deck. Place this deck
+    # on the space provided at the top of the game board. Then place the
+    # Wildling threat token on the 2 position of the wildlings track
+    self.wildlings = 2 # wildling threat token starts on the 2 position
+    shuffle(WILDLING_CARDS)
+    self.wildling_cards = WILDLING_CARDS
+
+    # 3. Prepare the Westeros Decks: Separate the Westeros
+    # cards into decks according to their roman numeral (I, II, or III).
+    # Shuffle each deck and place them separately facedown next to
+    # the game board.
+    { shuffle(deck) for deck in WESTEROS_CARDS.itervalues() }
+    self.westeros_cards = WESTEROS_CARDS
+    self.revealed_westeros_cards = []
+
+    # 4. Place the Neutral Force Tokens: First collect the
+    # Neutral Force tokens marked with the correct range of
+    # players. Then place those tokens on the areas of the game
+    # board matching the name on each token.
+
+
+    # 5. Place Game Round Marker: Place the Game Round
+    # marker on the 1 position of the Round track.
+    self.game_round_marker = 1
+
+    # 6. Determine Player Houses: Each player now selects which
+    # House he wishes to control during the game (Stark, Lannister,
+    # Greyjoy, Tyrell, Baratheon, or Martell). Alternatively, players
+    # may randomly determine which House each player will control.
+    # When playing a game with fewer than six players, some Houses
+    # are not eligible to be played, see page 28.
+    self.assign_houses()
+    self.houses_dict = { p.house : p for p in self.players }
+    self.players_dict = { p.house : p for p in self.players } #combine with above
+
+    # 7. Gather House Materials: Each player gathers all
+    # materials belonging to his House. These are: 1 player screen,
+    # 7 House cards, 15 Order tokens, 1 Supply token, 3 Influence
+    # tokens, 1 Victory Point token, 1 Garrison token, and all
+    # plastic units of his color (do not take any House-specific
+    # Power tokens yet).
+
     self.throne_holder  = self.influence['iron throne'][1]
     self.sword_holder   = self.influence['fiefdom'][1]
     self.raven_holder   = self.influence['kings court'][1]
 
-    shuffle(WILDLING_CARDS)
-    { shuffle(deck) for deck in WESTEROS_CARDS.itervalues() }
-    self.wildling_cards = WILDLING_CARDS
-    self.westeros_cards = WESTEROS_CARDS
-
-    self.assign_houses()
-    self.houses_dict = { p.house : p for p in self.players }
+    # 8. Place Influence, Victory and Supply Tokens: Each player
+    # places his Victory, Supply, and Influence tokens on the game
+    # board tracks as instructed by his player screen. Unlike the
+    # Influence tracks, more than one House may share the same
+    # position on the Victory and Supply tracks.
+    # If playing with fewer than six players, slide every Influence
+    # token to the left (towards the 1 position) on each Influence
+    # track to fill any leftward empty position (in other words, the
+    # highest numbered positions on each track remains empty
+    # and unused in games with fewer than six players). The Setup
+    # Diagram on page 5 illustrates how Influence tokens have been
+    # shifted left in a four-player game.
+    # The Houses occupying each 1 (i.e., left-most) position on each
+    # Influence track now claim the pictured Dominance token for
+    # that track (the Iron Throne, the Valyrian Steel Blade, or the
+    # Messenger Raven token).
+    # 9. Place Units: Each player then places all of his starting
+    # units on the game board according to the instructions on his
+    # player screen.
+    # 10. Place Garrison Tokens: Each player places his Garrison
+    # token on his home area (matching the area name on the token).
+    # 11. Gather Power Tokens: Place all Power tokens (for
+    # all Houses) in a central pile. This pile of Power tokens is
+    # referred to as the 'Power Pool." Each player then takes five
+    # Power tokens matching his House from the Power Pool.
 
   def __str__(self):
-    s = '\nTurn:\n  {}'.format(self.turn)
+    s = '\nTurn:\n  {}'.format(self.game_round_marker)
     s += '\n\nPhase:\n  {}'.format(self.phase)
     s += '\n\nPlayers:'
     for k, v in self.players_dict.iteritems():
-      s += '\n  {}: {} ... AI module: {}'.format(k, v.house, v.ai)
-    s += '\n\nWinner:\n  {}'.format(self.winner)
-    s += '\n\nRuleset:\n  {}'.format(self.ruleset)
+      s += '\n  {}: {} ... AI module: {}'.format(v.name, v.house, v.ai)
+    if self.winner:
+      s += '\n\nWinner:\n  {}'.format(self.winner)
+    else:
+      s += '\n\nLeader:\n  {}'.format(self.leader)
     s += '\n\nWildlings:\n  {}'.format(self.wildlings)
     s += '\n\nInfluence:'
     for influence in self.influence:
       s += '\n  {}:'.format(influence)
       for place, player in self.influence[influence].iteritems():
-        s += '\n    {}: {}'.format(place, player)
+        s += ', {}: {}'.format(place, player)
     s += '\n\nOwned Territories:'
     ot = self.map.owned_territories(self.players)
     for house in ot:
-      s += '\n  ' + house
-      for t in ot[house]:
-        s += '\n    ' + t
+      s += '\n  ' + house + ': '
+      s += ", ".join(ot[house])
     return s
 
 
@@ -85,14 +153,13 @@ class Game(object):
 
 
   def tick(self):
-    self.turn += 1
-    # print 'turn {}'.format(self.turn)
-    if self.turn > 1:
+    if self.game_round_marker > 1:
       self.westeros_phase()
 
     self.planning_phase()
     self.action_phase()
     self.clear()
+    self.game_round_marker += 1
 
   def clear(self):
     for t in territories.itervalues():
@@ -101,17 +168,17 @@ class Game(object):
   def reconcile_supply(self):
 
     def over_supply_limit(house):
-      #print '\nhouse: {}'.format(house)
+      logger.debug('house: {}'.format(house))
       limits = sorted(self.supply_map[self.supply_limits[house]], reverse=True)
-      #print '  limits = {}'.format(limits)
+      logger.debug('limits = {}'.format(limits))
       loads = sorted(self.supply_loads[house], reverse=True)
-      #print '  loads = {}'.format(loads)
+      logger.debug('loads = {}'.format(loads))
       if len(loads) > len(limits):
-        #print '    over supply limit!'
+        logger.debug('over supply limit!')
         return 1
       for i in range(len(loads)):
         if loads[i] > limits[i]:
-          #print '    over supply limit!'
+          logger.debug('over supply limit!')
           return 1
       return 0
 
@@ -120,6 +187,18 @@ class Game(object):
       if over_supply_limit(house):
         self.supply_loads[house] = self.houses_dict[house].reconcile_supply_limit(self)
 
+  def bid(self, influence):
+    bids = {}
+    for house in self.houses_dict:
+      bids[house] = self.houses_dict[house].bid_on_influence(self, influence) # { 'tyrell':3, 'greyjoy':5, ... }
+    bids = sorted(zip(bids.values(),bids.keys()), reverse=True)
+
+    # discard tokens
+    for bid in bids:
+      self.players_dict[bid[1]].power_tokens -= bid[0]
+
+    return bids
+
   def bid_influence(self):
 
     def reconcile_ties(tying_houses):
@@ -127,10 +206,8 @@ class Game(object):
       return iron_throne_holder.determine_bid_tie_order(self, tying_houses)
 
     for influence in self.influence:
-      bids = {}
-      for house in self.houses_dict:
-        bids[house] = self.houses_dict[house].bid_on_influence(self, influence) # { 'tyrell':3, 'greyjoy':5, ... }
-      bids = sorted(zip(bids.values(),bids.keys()), reverse=True)
+      bids = self.bid(influence)
+
       index = 0
       new_positions = []
       while True:
@@ -168,63 +245,123 @@ class Game(object):
       else:
         player.power_tokens += tokens
 
+  ### WESTEROS PHASE ###
   def westeros_phase(self):
     self.phase = 'Westeros'
+    # if game round marker = 10 find winner/end game
+    if self.game_round_marker >= 10:
+      self.check_winner()
+      return
 
-    def draw_card(num):
-      card = self.westeros_cards[num][0]
-      self.westeros_cards[num].rotate(-1)
-      return card
-
-    def resolve_card(card, num):
-      if card == 'muster':
-        pass
-      if card == 'supply':
-        self.reconcile_supply()
-      if card == 'bid':
-        self.bid_influence()
-      if card == 'consolidate':
-        self.consolidate_power()
-      if card == 'raven_holder':
-        pass
-      if card == 'sword_holder':
-        pass
-      if card == 'throne_holder':
-        pass
-      if card == 'wildlings':
-        pass
-      if card == 'shuffle': # draw the respective card again
-        shuffle(self.westeros_cards[num])
-        card = draw_card(num)
-        resolve_card(card, num)
-      if card == 'nothing':
-        pass # actually pass
-      if num == 3:
-        self.no_raid_orders = 1 if card == 'no_raid_orders' else 0
-        self.no_support_orders = 1 if card == 'no_support_orders' else 0
-        self.no_defense_orders = 1 if card == 'no_defense_orders' else 0
-        self.no_consolidate_orders = 1 if card == 'no_consolidate_orders' else 0
-        self.no_march_plus_one_orders = 1 if card == 'no_march_plus_one_orders' else 0
-      return None
-
+    # Reveal top 3 westeros
     for num in self.westeros_cards:
-      card = draw_card(num)
-      resolve_card(card, num)
+      card = self.draw_card(num)
+      self.revealed_westeros_cards.append(card)
 
+    # Advance wildling track
+    for card in self.revealed_westeros_cards:
+      if card in ['raven_holder', 'throne_holder', 'nothing', \
+        'no_raid_orders', 'no_support_orders', 'no_defense_orders', \
+        'no_consolidate_orders', 'no_march_plus_one_orders']:
+        self.wildlings += 1
 
+    if self.wildlings >= 12:
+      self.wildlings_attack()
 
+    # resolve 3 westeros cards
+    for i, card in enumerate(self.revealed_westeros_cards):
+      self.resolve_card(card, i+1)
+
+    self.revealed_westeros_cards = []
+
+  def draw_card(self, num):
+    card = self.westeros_cards[num][0]
+    self.westeros_cards[num].rotate(-1)
+    return card
+
+  def resolve_card(self, card, num):
+    if card == 'muster':
+      pass
+    if card == 'supply':
+      self.reconcile_supply()
+    if card == 'bid':
+      self.bid_influence()
+    if card == 'consolidate':
+      self.consolidate_power()
+    if card == 'raven_holder':
+      pass
+    if card == 'sword_holder':
+      pass
+    if card == 'throne_holder':
+      pass
+    if card == 'wildlings':
+      self.wildlings_attack()
+    if card == 'shuffle': # draw the respective card again
+      shuffle(self.westeros_cards[num])
+      card = self.draw_card(num)
+      self.resolve_card(card, num)
+    if card == 'nothing':
+      pass
+    if card == 'no_raid_orders':
+      self.no_raid_orders = 1
+    if card == 'no_support_orders':
+      self.no_support_orders = 1
+    if card == 'no_defense_orders':
+      self.no_defense_orders = 1
+    if card == 'no_consolidate_orders':
+      self.no_consolidate_orders = 1
+    if card == 'no_march_plus_one_orders':
+      self.no_march_plus_one_orders = 1
+    return None
+
+  def wildlings_attack(self):
+    wildling_strength = self.wildlings
+
+    # Bid
+    bids = self.bid('wildling attack') #influence parameter?
+
+    night_watch_strength = sum([bid[0] for bid in bids])
+
+    # Calculate victory
+    wildling_victory = night_watch_strength < wildling_strength
+
+    if wildling_victory:
+      self.wildlings = max(0, self.wildlings - 2)
+    else:
+      self.wildlings = 0
+
+    # Revolve attack
+    wildling_card = self.wildling_cards.pop()
+    self.resolve_wildling_card(wildling_card, wildling_victory, bids)
+    self.wildling_cards.append(wildling_card)
+
+  def resolve_wildling_card(self, card, wildling_victory, bids):
+    lowest_bidder = bids[-1][1]
+    highest_bidder = bids[0][1]
+
+    if card == 'skinchanger_scout':
+      # -2 for everyone, 0 for lowest
+      if wildling_victory:
+        self.players_dict[lowest_bidder].power_tokens = 0
+        for p in self.players:
+          p.power_tokens = max(0, p.power_tokens - 2)
+      # highest bidder keeps his tokens
+      else:
+        self.players_dict[highest_bidder].power_tokens += bids[0][0]
+
+  ### WESTEROS PHASE END ###
 
   def planning_phase(self):
-    # print 'Planning Phase'
+    logger.info('Planning Phase')
     self.phase = 'Planning'
     for player in self.players:
       plans = player.move(self)
       ## TODO break out
       for plan in plans:
-        territories[plan['source']].order_token = plan['data']['order']
+        self.map.territories[plan['source']].order_token = plan['data']['order']
 
   def action_phase(self):
-    # print 'Action Phase'
+    logger.info('Action Phase')
     self.phase = 'Action'
 
     self.resolve_orders('Raid', self.resolve_raid)
@@ -246,42 +383,42 @@ class Game(object):
         if len(self.map.territories_for(player, action_phase)) > 0:
 
           plans = player.move(self, action_phase=action_phase)
-          # print '---------'
+          logger.debug('---------')
           for plan in plans:
-            # print "{} {}".format(player_name, plan['action'])
+            logger.debug("{} {}".format(player_name, plan['action']))
             phase_resolver(plan, player)
 
 
-          territories[plans[0]['source']].order_token = None
+            self.map.territories[plan['source']].order_token = None
 
   def resolve_consolidate(self, plan, player):
     t = territories[plan['source']]
     if plan['data']['type'] == 'consolidation':
       power_tokens = t.consolidation + 1
       player.power_tokens += power_tokens
-      # print "{} has {} power".format(player.name, player.power_tokens)
+      logger.debug("{} has {} power".format(player.name, player.power_tokens))
     elif plan['data']['type'] == 'muster':
-      pass# print 'todo'
+      pass # TODO
 
   def resolve_raid(self, plan, player):
     t1 = territories[plan['source']]
     t2 = territories.get(plan['data']['target'])
 
-    if t2:
+    if t2 and t2.order_token:
       if t2.order_token['type'] in ['Raid', 'Support']:
-        # print "{} loses order {}".format(t2.owner, t2.order_token['type'])
+        logger.debug("{} loses order {}".format(t2.owner, t2.order_token['type']))
         t2.order_token = None
       elif t2.order_token == 'Consolidate':
-        # print "{} loses order {} and power token".format(t2.owner, t2.order_token['type'])
+        logger.debug("{} loses order {} and power token".format(t2.owner, t2.order_token['type']))
         t2.order_token = None
         players_dict[t1.owner].power_tokens += 1
         if players_dict[t2.owner].power_tokens > 0:
           players_dict[t2.owner].power_tokens -= 1
       elif t2.order_token['type'] == 'Defense' and t1.order_token['stars'] > 0:
-        # print "{} loses order {}".format(t2.owner, t2.order_token['type'])
+        logger.debug("{} loses order {}".format(t2.owner, t2.order_token['type']))
         t2.order_token = None
     else:
-      pass# print 'Raid useless'
+      logger.debug('Raid useless')
 
   def resolve_march(self, plan, player):
     t1 = territories[plan['source']]
@@ -289,7 +426,7 @@ class Game(object):
     if t2:
       self.battle(t1,t2, plan['data'].get('leave_token'))
     else:
-      pass# print 'March useless'
+      logger.debug('March useless')
 
   def battle(self, t1, t2, leave_token):
       defend_power = t2.knight * 2 + t2.footmen + t2.ships + t2.castles
@@ -305,7 +442,7 @@ class Game(object):
 
       #TODO influence on ties, cards, tides of battle
       if attack_power > defend_power:
-        # print "{} beat {} and won {} castles".format(t1.owner, t2.owner, t2.castles)
+        logger.debug("{} beat {} and won {} castles".format(t1.owner, t2.owner, t2.castles))
         t2.owner = t1.owner
         t2.knight = t1.knight
         t2.footmen = t1.footmen
@@ -320,21 +457,21 @@ class Game(object):
           t1.power_token = 1
           attacker.power_tokens -= 1
       else:
-        pass# print "{} lost to {}".format(t1.owner, t2.owner)
+        logger.debug("{} lost to {}".format(t1.owner, t2.owner))
 
   def print_power_tokens(self):
     for house, player in self.houses_dict.iteritems():
-      print '{} : {} power tokens'.format(house, player.power_tokens)
+      logger.debug('{} : {} power tokens'.format(house, player.power_tokens))
 
 
   def check_winner(self):
     winner = None
-    leader = None
+    self.leader = None
     max_castles = 0
 
     player_dict = {}
     for p in self.players:
-      player_dict[p.name] = 0
+      player_dict[p.house] = 0
 
     for t in self.map.territories.itervalues():
       if t.owner:
@@ -343,17 +480,17 @@ class Game(object):
     for p, count in player_dict.iteritems():
       if count > max_castles:
         max_castles = count
-        leader = p
+        self.leader = p
 
-    if self.turn > 9 or max_castles >= 7:
-      winner = leader
+    if self.game_round_marker > 9 or max_castles >= 7:
+      winner = self.leader
 
     self.winner = winner
     return winner
 
 
   def run(self):
-    while self.turn < 10 and not self.winner:
+    while self.game_round_marker < 10 and not self.winner:
       self.tick()
 
     return self.players_dict[self.check_winner()]
@@ -376,14 +513,15 @@ class Map(defaultdict):
 
   def __str__(self):
     '''
-    Print out a formatted representation of each Territory
+    logger out a formatted representation of each Territory
     and its neighbors
     '''
-
+    s = ""
     for t1 in self:
-      print '\n', t1
+      s += '\n' + t1
       for t2 in self[t1]:
-        print '    {} - {}'.format(t2, self[t1][t2])
+        s += '    {} - {}'.format(t2, self[t1][t2])
+    return s
 
   def create(self):
     '''
@@ -396,13 +534,16 @@ class Map(defaultdict):
         self[t.name][n.name] = t.type + '-' + n.type
         self[n.name][t.name] = n.type + '-' + t.type
 
-  def territories_for(self, player, action_phase=None):
+  def territories_for(self, player, action_phase=None, planning=False):
     player_territories = []
     for t in self.territories.itervalues():
-      if t.owner and t.owner == player.name:
+      if t.owner and t.owner == player.house:
         if action_phase:
           if t.order_token and t.order_token['type'] == action_phase:
-            # print t.order_token['type']
+            logger.debug(t.order_token['type'])
+            player_territories.append(t)
+        elif planning:
+          if t.has_unit():
             player_territories.append(t)
         else:
           player_territories.append(t)
@@ -444,24 +585,12 @@ if __name__ == '__main__':
   ai_module = SimpleAI
 
   players = [
-    Player('martell',   ai_module('random-martell')),
-    Player('baratheon', ai_module('random-baratheon')),
-    Player('tyrell',    ai_module('random-tyrell')),
-    Player('lannister', ai_module('random-lannister')),
-    Player('greyjoy',   ai_module('random-greyjoy')),
-    Player('stark',     ai_module('random-stark')),
+    Player('simple1',   ai_module()),
+    Player('simple2',   ai_module()),
+    Player('simple3',   ai_module()),
+    Player('simple4',   ai_module()),
+    Player('simple5',   ai_module()),
+    Player('human',     HumanAI()),
   ]
   g = Game(players=players, ruleset='classic')
-
-
-
-
-
-
-
-
-
-
-
-
-
+  g.run()

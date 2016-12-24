@@ -1,28 +1,26 @@
 from game import Game
 from player import Player
-from ai import *
+import ai
 
 def run():
   results = {}
 
-  ai_module = SimpleAI
-
   for i in range(0,1000):
     players = [
-      Player('martell',   ai_module('random-martell')),
-      Player('baratheon', ai_module('random-baratheon')),
-      Player('tyrell',    ai_module('random-tyrell')),
-      Player('lannister', ai_module('random-lannister')),
-      Player('greyjoy',   ai_module('random-greyjoy')),
-      Player('stark',     ai_module('random-stark')),
+      Player('Random1', ai.RandomAI()),
+      Player('random2', ai.RandomAI()),
+      Player('rand3', ai.RandomAI()),
+      Player('rand4', ai.RandomAI()),
+      Player('rand5', ai.RandomAI()),
+      Player('Simple6', ai.SimpleAI()),
     ]
     if i % 100 == 0:
       print 'Game {}'.format(i)
 
     game = Game(players)
     winner = game.run()
-    wins = results.get(winner.ai.name, 0)
-    results[winner.ai.name] = wins + 1
+    wins = results.get(winner.name, 0)
+    results[winner.name] = wins + 1
 
 
 
