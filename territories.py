@@ -30,6 +30,12 @@ class Territory(object):
   def has_unit(self):
      return (self.footmen + self.knight + self.siege + self.ships) > 0
 
+  def attack_power(self):
+     return (4 * self.siege) + (2 * self.knight) + (self.footmen) + (self.ships)
+
+  def defense_power(self):
+     return (2 * self.knight) + (self.footmen) + (self.ships)
+
   def __str__(self):
      s = self.name + ': '
      s += self.owner + ' '

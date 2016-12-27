@@ -1,4 +1,3 @@
-import pdb
 import os
 import time
 import copy
@@ -83,7 +82,6 @@ class Game(object):
     # are not eligible to be played, see page 28.
     self.assign_houses()
     self.houses_dict = { p.house : p for p in self.players }
-    self.players_dict = { p.house : p for p in self.players } #combine with above
 
     # 7. Gather House Materials: Each player gathers all
     # materials belonging to his House. These are: 1 player screen,
@@ -126,8 +124,8 @@ class Game(object):
     s = '\nTurn:\n  {}'.format(self.game_round_marker)
     s += '\n\nPhase:\n  {}'.format(self.phase)
     s += '\n\nPlayers:'
-    for k, v in self.players_dict.iteritems():
-      s += '\n  {}: {} ... AI module: {}'.format(v.name, v.house, v.ai)
+    for k, v in self.houses_dict.iteritems():
+      s += '\n  {}: {} ... AI module: {}'.format(v.name, v.house, v.ai.__name__)
     if self.winner:
       s += '\n\nWinner:\n  {}'.format(self.winner)
     else:
@@ -162,14 +160,17 @@ class Game(object):
     self.game_round_marker += 1
 
   def clear(self):
-    for t in territories.itervalues():
+    for t in self.map.territories.itervalues():
       t.order_token = None
 
   def reconcile_supply(self):
 
     def over_supply_limit(house):
       logger.debug('house: {}'.format(house))
-      limits = sorted(self.supply_map[self.supply_limits[house]], reverse=True)
+      lim = self.supply_limits[house]
+      if lim > 6:
+        lim = 6
+      limits = sorted(self.supply_map[lim], reverse=True)
       logger.debug('limits = {}'.format(limits))
       loads = sorted(self.supply_loads[house], reverse=True)
       logger.debug('loads = {}'.format(loads))
@@ -195,7 +196,7 @@ class Game(object):
 
     # discard tokens
     for bid in bids:
-      self.players_dict[bid[1]].power_tokens -= bid[0]
+      self.houses_dict[bid[1]].power_tokens -= bid[0]
 
     return bids
 
@@ -281,7 +282,7 @@ class Game(object):
 
   def resolve_card(self, card, num):
     if card == 'muster':
-      pass
+      self.mustering()
     if card == 'supply':
       self.reconcile_supply()
     if card == 'bid':
@@ -289,14 +290,17 @@ class Game(object):
     if card == 'consolidate':
       self.consolidate_power()
     if card == 'raven_holder':
+      # Raven holder chooses bid, consolidate, or none
       pass
     if card == 'sword_holder':
+      # sword holder chooses no +1 march, no defense orders, or none
       pass
     if card == 'throne_holder':
+      # Throne holder chooses muster, supply, or none
       pass
     if card == 'wildlings':
       self.wildlings_attack()
-    if card == 'shuffle': # draw the respective card again
+    if card == 'shuffle': # draw a new card
       shuffle(self.westeros_cards[num])
       card = self.draw_card(num)
       self.resolve_card(card, num)
@@ -314,26 +318,89 @@ class Game(object):
       self.no_march_plus_one_orders = 1
     return None
 
+  def mustering(self):
+    action_order = self.influence['iron throne']
+    for i in range(1, self.num_players + 1):
+      player_name = action_order[i]
+      player = self.houses_dict[player_name]
+
+      plans = player.muster(self)
+      for plan in plans:
+        logger.debug("{} mustering".format(player_name))
+        self.resolve_muster(plan, player)
+
+  def resolve_muster(self, plan, player):
+    t_name = plan['source']
+    t = self.map.territories[t_name]
+    units = plan['data']['units']
+    mustering_points = t.castles
+
+    for unit_map in units:
+      muster_type = unit_map['type']
+      unit = unit_map['unit_name']
+      if muster_type == 'upgrade' and mustering_points > 0:
+        if t.footmen > 0:
+          if unit == 'siege' and player.siege_units > 0:
+            t.siege += 1
+            player.siege_units -= 1
+            t.footmen -= 1
+            player.footmen_units += 1
+            mustering_points -= 1
+          elif unit == 'knight' and player.knights_units > 0:
+            t.knight += 1
+            player.knights_units -= 1
+            t.footmen -= 1
+            player.footmen_units += 1
+            mustering_points -= 1
+          else:
+            logger.debug("Useless muster upgrade")
+      elif muster_type == 'new' and mustering_points > 0:
+        if unit == 'siege' and player.siege_units > 0 and mustering_points > 1:
+            t.siege += 1
+            player.siege_units -= 1
+            mustering_points -= 2
+        elif unit == 'knight' and player.knights_units > 0 and mustering_points > 1:
+            t.knight += 1
+            player.knights_units -= 1
+            mustering_points -= 2
+        elif unit == 'footmen' and player.footmen_units > 0 and mustering_points > 0:
+            t.footmen += 1
+            player.footmen_units -= 1
+            mustering_points -= 1
+        elif unit == 'ship' and player.ship_unit > 0 and mustering_points > 0:
+            ship_territory = self.map.territories(unit['target'])
+            if unit.get('port'):
+              ship_territory.portShips += 1
+            else:
+              ship_territory.ships += 1
+            player.ship_units -= 1
+            mustering_points -= 1
+        else:
+          logger.debug("Useless new muster")
+
+
+
   def wildlings_attack(self):
     wildling_strength = self.wildlings
 
     # Bid
-    bids = self.bid('wildling attack') #influence parameter?
+    bids = self.bid('wildling attack') # not sure what the text input should be here
 
+    # Calculate nightwatch strength
     night_watch_strength = sum([bid[0] for bid in bids])
 
     # Calculate victory
     wildling_victory = night_watch_strength < wildling_strength
 
-    if wildling_victory:
+    if wildling_victory: #if wildlings win they only lose 2 strength
       self.wildlings = max(0, self.wildlings - 2)
     else:
       self.wildlings = 0
 
     # Revolve attack
-    wildling_card = self.wildling_cards.pop()
+    wildling_card = self.wildling_cards.pop() # grab next card
     self.resolve_wildling_card(wildling_card, wildling_victory, bids)
-    self.wildling_cards.append(wildling_card)
+    self.wildling_cards.append(wildling_card) # put at bottom of deck
 
   def resolve_wildling_card(self, card, wildling_victory, bids):
     lowest_bidder = bids[-1][1]
@@ -342,12 +409,29 @@ class Game(object):
     if card == 'skinchanger_scout':
       # -2 for everyone, 0 for lowest
       if wildling_victory:
-        self.players_dict[lowest_bidder].power_tokens = 0
+        self.houses_dict[lowest_bidder].power_tokens = 0
         for p in self.players:
           p.power_tokens = max(0, p.power_tokens - 2)
       # highest bidder keeps his tokens
       else:
-        self.players_dict[highest_bidder].power_tokens += bids[0][0]
+        self.houses_dict[highest_bidder].power_tokens += bids[0][0]
+    if card == 'massing_milkwater':
+      pass #TODO
+    if card == 'king_beyond_the_wall':
+      pass #TODO
+    if card == 'mammoth_riders':
+      pass #TODO
+    if card == 'crow_killers':
+      pass #TODO
+    if card == 'horde_descends':
+      pass #TODO
+    if card == 'rattleshirt_raiders':
+      pass #TODO
+    if card == 'silence_at_the_wall':
+      # nothing happens
+      pass
+    if card == 'prememptive_raid':
+      pass #TODO
 
   ### WESTEROS PHASE END ###
 
@@ -378,7 +462,7 @@ class Game(object):
     while len(self.map.territories_with_order(action_phase)) > 0:
       for i in range(1, self.num_players + 1):
         player_name = action_order[i]
-        player = self.players_dict[player_name]
+        player = self.houses_dict[player_name]
 
         if len(self.map.territories_for(player, action_phase)) > 0:
 
@@ -392,17 +476,17 @@ class Game(object):
             self.map.territories[plan['source']].order_token = None
 
   def resolve_consolidate(self, plan, player):
-    t = territories[plan['source']]
+    t = self.map.territories[plan['source']]
     if plan['data']['type'] == 'consolidation':
       power_tokens = t.consolidation + 1
       player.power_tokens += power_tokens
       logger.debug("{} has {} power".format(player.name, player.power_tokens))
     elif plan['data']['type'] == 'muster':
-      pass # TODO
+      self.resolve_muster(plan, player)
 
   def resolve_raid(self, plan, player):
-    t1 = territories[plan['source']]
-    t2 = territories.get(plan['data']['target'])
+    t1 = self.map.territories[plan['source']]
+    t2 = self.map.territories.get(plan['data']['target'])
 
     if t2 and t2.order_token:
       if t2.order_token['type'] in ['Raid', 'Support']:
@@ -421,42 +505,67 @@ class Game(object):
       logger.debug('Raid useless')
 
   def resolve_march(self, plan, player):
-    t1 = territories[plan['source']]
-    t2 = territories.get(plan['data']['target'])
+    t1 = self.map.territories[plan['source']]
+    t2 = self.map.territories.get(plan['data']['target'])
     if t2:
       self.battle(t1,t2, plan['data'].get('leave_token'))
     else:
       logger.debug('March useless')
 
   def battle(self, t1, t2, leave_token):
-      defend_power = t2.knight * 2 + t2.footmen + t2.ships + t2.castles
-      attack_power = t1.knight * 2 + t1.footmen + t1.ships + t1.siege
+      # TODO Add defense and march bonuses
 
-      # TODO ask others to join sides
+      defend_power = t2.knight * 2 + t2.footmen + t2.ships + t2.castles + t2.garrison
+      attack_power = t1.knight * 2 + t1.footmen + t1.ships
+      if t2.castles > 0:
+        attack_power += 4 * t1.siege
+
       for t in t2.neighbors:
         support_t = self.map.territories[t]
-        if support_t.owner != None and support_t.owner == t2.owner and support_t.order_token and support_t.order_token['type'] == 'Support':
-          defend_power += support_t.knight * 2 + support_t.footmen + support_t.ships
+        if support_t.owner == t2.owner and support_t.order_token and support_t.order_token['type'] == 'Support':
+          defend_power += support_t.ships
+          if t2.type == 'land':
+            defend_power += support_t.knight * 2 + support_t.footmen
         elif support_t.owner == t1.owner and support_t.order_token and support_t.order_token['type'] == 'Support':
           attack_power += support_t.knight * 2 + support_t.footmen + support_t.ships
+          if t2.type == 'land':
+            attack_power += support_t.knight * 2 + support_t.footmen
+            if t2.castles > 0:
+              attack_power += support_t.siege * 4
+        elif support_t.owner is not None:
+          # TODO Ask for support
+          pass
 
-      #TODO influence on ties, cards, tides of battle
+      # TODO Ask to use blade
+
+      # TODO choose house cards
+
+      # TODO influence on ties, cards
       if attack_power > defend_power:
-        logger.debug("{} beat {} and won {} castles".format(t1.owner, t2.owner, t2.castles))
+        attacker = self.houses_dict[t1.owner]
+        # TODO moving/retreating
         t2.owner = t1.owner
         t2.knight = t1.knight
         t2.footmen = t1.footmen
         t2.ships = t1.ships
         t2.siege = t1.siege
+
         t1.knight = 0
         t1.footmen = 0
         t1.ships = 0
         t1.siege = 0
-        attacker = self.players_dict[t1.owner]
+
         if leave_token and attacker.power_tokens > 0:
           t1.power_token = 1
           attacker.power_tokens -= 1
+        else:
+          # pass
+          t1.owner = None
       else:
+        t1.knight = 0
+        t1.footmen = 0
+        t1.ships = 0
+        t1.siege = 0
         logger.debug("{} lost to {}".format(t1.owner, t2.owner))
 
   def print_power_tokens(self):
@@ -466,19 +575,17 @@ class Game(object):
 
   def check_winner(self):
     winner = None
-    self.leader = None
     max_castles = 0
-
     player_dict = {}
     for p in self.players:
       player_dict[p.house] = 0
 
     for t in self.map.territories.itervalues():
       if t.owner:
-        player_dict[t.owner] += 1
+        player_dict[t.owner] += t.castles
 
     for p, count in player_dict.iteritems():
-      if count > max_castles:
+      if count >= max_castles:
         max_castles = count
         self.leader = p
 
@@ -493,7 +600,7 @@ class Game(object):
     while self.game_round_marker < 10 and not self.winner:
       self.tick()
 
-    return self.players_dict[self.check_winner()]
+    return self.houses_dict[self.check_winner()]
 
 
 
@@ -551,12 +658,12 @@ class Map(defaultdict):
     return player_territories
 
   def territories_with_order(self, action_phase):
-    territories = []
+    t_w_order = []
     for t in self.territories.itervalues():
       if t.order_token and t.order_token['type'] == action_phase:
-        territories.append(t)
+        t_w_order.append(t)
 
-    return territories
+    return t_w_order
 
   def owned_territories(self, players):
     ot = { p.house : [] for p in players }

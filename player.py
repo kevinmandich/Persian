@@ -29,6 +29,9 @@ class Player(object):
     elif game.phase == 'Action':
       return self.action_move(game, action_phase=action_phase)
 
+  def muster(self, game):
+    return self.ai.muster(game, self)
+
   def action_move(self, game, action_phase):
     return self.ai.action_move(game, self, action_phase)
 

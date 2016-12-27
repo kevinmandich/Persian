@@ -44,4 +44,4 @@ WESTEROS_CARDS = { \
 
 # TODO add all 9 cards
 # https://dl.dropboxusercontent.com/u/80803994/wildlings.png
-WILDLING_CARDS = deque(['skinchanger_scout'])
+WILDLING_CARDS = deque(['skinchanger_scout', 'massing_milkwater', 'king_beyond_the_wall', 'mammoth_riders', 'crow_killers', 'horde_descends', 'rattleshirt_raiders', 'silence_at_the_wall', 'prememptive_raid'])

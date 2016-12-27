@@ -1,17 +1,22 @@
 from game import Game
 from player import Player
 import ai
+import pdb
 
 def run():
   results = {}
 
   for i in range(0,1000):
     players = [
-      Player('Random1', ai.RandomAI()),
-      Player('random2', ai.RandomAI()),
+      # Player('Random1', ai.RandomAI()),
+      # Player('random2', ai.RandomAI()),
       Player('rand3', ai.RandomAI()),
       Player('rand4', ai.RandomAI()),
-      Player('rand5', ai.RandomAI()),
+      # Player('Simple1', ai.SimpleAI()),
+      # Player('Simple2', ai.SimpleAI()),
+      Player('Simple3', ai.SimpleAI()),
+      Player('Simple4', ai.SimpleAI()),
+      Player('Simple5', ai.SimpleAI()),
       Player('Simple6', ai.SimpleAI()),
     ]
     if i % 100 == 0:

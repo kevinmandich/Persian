@@ -27,7 +27,7 @@ class AiPlayer(object):
     return bids
 
   def action_move(self, game, player, action_phase):
-    territories_for_move = game.map.territories_for(player, action_phase)
+    territories_for_move = game.map.territories_for(player, action_phase=action_phase)
 
     if action_phase == 'Raid':
       plan_moves = self.raid_move(game, player, territories_for_move)
@@ -72,6 +72,20 @@ class AiPlayer(object):
 
     if len(results) < 1:
       results.append({'action': 'March', 'source': my_territories[0].name, 'data': {'target': ''}})
+    return results
+
+  def possible_muster_territories(self, game, player):
+    my_territories = game.map.territories_for(player)
+    return filter(lambda x: x.castles > 0, my_territories)
+
+  def possible_muster_for_territory(self, game, player, territory):
+    results = []
+    # TODO add ship options
+    results.append({'action': 'Muster', 'source': territory.name, 'data': { 'units': [{'type': 'new', 'unit_name': 'footmen'}]}})
+    results.append({'action': 'Muster', 'source': territory.name, 'data': { 'units': [{'type': 'new', 'unit_name': 'knight'}]}})
+    results.append({'action': 'Muster', 'source': territory.name, 'data': { 'units': [{'type': 'new', 'unit_name': 'siege'}]}})
+    results.append({'action': 'Muster', 'source': territory.name, 'data': { 'units': [{'type': 'upgrade', 'unit_name': 'knight'}]}})
+    results.append({'action': 'Muster', 'source': territory.name, 'data': { 'units': [{'type': 'upgrade', 'unit_name': 'siege'}]}})
     return results
 
 
@@ -146,11 +160,8 @@ class RandomAI(AiPlayer):
     else:
       return []
 
-
   def raid_move(self, game, player, my_territories):
     neighbors = []
-    #TODO include more source territories to look at
-    # for t in my_territories:
     for t in my_territories:
       for n in t.neighbors:
         neighbor = game.map.territories[n]
@@ -171,7 +182,7 @@ class RandomAI(AiPlayer):
 
   def march_move(self, game, player, my_territories):
     neighbors = []
-    # for t in my_territories:
+
     for t in my_territories:
       for n in t.neighbors:
         neighbor = game.map.territories[n]
@@ -185,28 +196,46 @@ class RandomAI(AiPlayer):
 
 
   def bid_on_influence(self, game, influence, player):
-    return choice(self.bid_options(player))
+    options = self.bid_options(player)
+    return choice(options)
 
   def determine_bid_tie_order(self, game, tying_houses):
     shuffle(tying_houses)
     return tying_houses
+
+  def muster(self, game, player):
+    return []
 
 class SimpleAI(AiPlayer):
   def reconcile_supply_limit(self, game):
     return [2]
 
+  def muster(self, game, player):
+    muster_terrs = self.possible_muster_territories(game, player)
+    results = []
+    for t in muster_terrs:
+      musters = self.possible_muster_for_territory(game, player, t)
+      results.append(choice(musters))
+    return results
+
   def bid_on_influence(self, game, influence, player):
-    return 0
+    options = self.bid_options(player)
+    return choice(options[0:2])
 
   def determine_bid_tie_order(self, game, tying_houses):
-
-    shuffle(tying_houses)
+    def cmp_it(x,y):
+      if x == self.player.house:
+        return -1
+      else:
+        return x < y
+    tying_houses.sort(cmp_it)
     return tying_houses
 
   def planning_move(self, game, player):
     my_plans = self.planning_moves(game, player)
+    shuffle(my_plans)
     if len(my_plans) > 0:
-      return [my_plans[0]]
+      return my_plans
     else:
       return []
 
@@ -228,9 +257,10 @@ class SimpleAI(AiPlayer):
     for t in my_territories:
       for n in t.neighbors:
         neighbor = game.map.territories[n]
-        if neighbor.order_token and neighbor.owner != player.name:
+        if neighbor.order_token and neighbor.owner != player.house:
           neighbors.append({'neighbor': n, 'source': t.name})
 
+    shuffle(neighbors)
     if len(neighbors) > 0:
       plan = neighbors.pop()
       return [{'action': 'Raid', 'source': plan['source'], 'data': {'target': plan['neighbor']}}]
@@ -239,20 +269,24 @@ class SimpleAI(AiPlayer):
 
 
   def consolidate_move(self, game, player, my_territories):
+    shuffle(my_territories)
     return [{'action': 'Consolidate', 'source': my_territories[0].name, 'data': {'type': 'consolidation'}}]
     # return [{'action': 'action', 'source': territories[0].name, 'data': {'type': 'muster'}}]
 
   def march_move(self, game, player, my_territories):
     neighbors = []
-    # for t in my_territories:
     for t in my_territories:
       for n in t.neighbors:
         neighbor = game.map.territories[n]
-        if (t.knight + t.footmen > neighbor.knight + neighbor.footmen) and neighbor.owner != player.name:
-          neighbors.append({'neighbor': n.name, 'source': t.name})
+        if ((t.attack_power() > neighbor.defense_power() or neighbor.castles > 0) and neighbor.owner != player.house):
+          token = False
+          if t.castles > 0 or player.power_tokens > 5:
+            token = True
+          neighbors.append({'neighbor': n, 'source': t.name, 'token':token})
 
+    shuffle(neighbors)
     if len(neighbors) > 0:
       plan = neighbors.pop()
-      return [{'action': 'March', 'source': plan['source'], 'data': {'target': plan['neighbor']}}]
+      return [{'action': 'March', 'source': plan['source'], 'data': {'target': plan['neighbor'], 'leave_token': plan['token']}}]
     else:
       return [{'action': 'March', 'source': my_territories[0].name, 'data': {'target': ''}}]
